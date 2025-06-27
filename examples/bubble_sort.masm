@@ -1,0 +1,384 @@
+# Bubble sort - but provable!
+#
+# Bubble sort is a sorting algorithm that repeatedly steps through the array, 
+# compares adjacent elements, and swaps them if they are in the wrong order. 
+# The process is repeated until the array is sorted, with smaller elements "bubbling" to the top of the array.
+#
+# Time Complexity:
+# - Best Case: O(n) (when the array is already sorted).
+# - Average Case: O(n^2) (for a randomly ordered array).
+# - Worst Case: O(n^2) (when the array is sorted in reverse order).
+#
+# Space Complexity:
+# - O(1), requiring only a constant amount of space regardless of the input size. (generally yes; not the case here)
+#
+# Benefits:
+# - Simplicity: Easy to understand and implement, suitable for small arrays.
+# - In-place: Requires only a constant amount O(1) of additional memory space. (generally yes; not the case here)
+# - Adaptive: Efficient for datasets that are already substantially sorted, as it can 
+#   detect if the array is already sorted and stop early.
+#
+# Trade-offs:
+# - Inefficiency: Performance degrades quickly with large datasets compared to more 
+#   advanced algorithms like quicksort or mergesort.
+# - High Operation Count: Requires multiple passes through the entire array, 
+#   leading to a higher number of overall operations.
+#
+# Usage Guidelines:
+# - Do's:
+#   - Add the length of the array as the only public input element in the `operand_stack`.
+#   - Add the array to be sorted as private input elements in the `advice_stack`.
+# - Dont's:
+#   - Avoid running the program without correctly populating the `operand_stack` and `advice_stack`.
+#   - Do not input a length greater than the actual length of the array.
+#   - Note that the VM does not support negative numbers.
+# - Additional Information:
+#   - The VM will output only the first 16 elements of your sorted array.
+#   - The program processes 'n' elements equal to the number added as public input,
+#     regardless of the actual length of the array.
+#
+# Example Usage:
+# To sort an array of 10 elements, add '10' to the `operand_stack` as public input, 
+# and add the array elements onto the `advice_stack` as private input. 
+# Execute the program to get the sorted array as output.
+
+# GLOBAL INPUTS
+# -------------------------------------------------------------------------------------------------
+
+# The memory address at which the `swapped` boolean is stored
+const.SWAPPED_ADDRESS=0
+
+# The memory address at which the `i_pointer` variable is stored
+const.I_POINTER_ADDRESS=1
+
+# The memory address at which the `j_pointer` variable is stored
+const.J_POINTER_ADDRESS=2
+
+# The memory address at which the `counter` variable is stored
+const.COUNTER_ADDRESS=3
+
+# The memory address at which the `length` variable is stored
+const.LENGTH_ADDRESS=4
+
+#! Initialises memory for sorting.  
+#!  
+#! Input:  
+#!   operand_stack: [n, ...]  
+#!   advice_stack: [d0, d1, .., dn]  
+#! Output: [...]  
+#!  
+#! Where:  
+#!  n: is the count of elements to be sorted.  
+proc.initialise
+    # initialise `swapped` boolean - initialised at 0 / false
+    push.0
+    push.SWAPPED_ADDRESS
+    mem_store
+
+    # initialise `i` index - initialised at 5 because mem[5] is the array start index
+    push.5
+    push.I_POINTER_ADDRESS
+    mem_store
+
+    # initialise `j` index - initialised at 6 because mem[6] is the second array index
+    push.6
+    push.J_POINTER_ADDRESS
+    mem_store
+
+    # initialise `counter` - initialised at 0
+    push.0
+    push.COUNTER_ADDRESS
+    mem_store
+
+    # initialise `length` - initialised as the array length using the public inputs
+    push.LENGTH_ADDRESS
+    mem_store
+
+    # Loop over the `advice_stack` pushing values 1-by-1 on the `operand_stack`
+    push.1
+    while.true
+        # Push 1 element from the array into the `operand_stack`
+        adv_push.1
+
+        # Load and increment `counter` to keep track of added elements
+        mem_load.3
+        add.1
+        dup
+        mem_store.3
+
+        # Load `length` array length and check if `counter` == `length`
+        # signifying that all elements from array have been added to `operand_stack`
+        mem_load.4
+        eq
+        if.true
+            # Stop looping and reset `counter` to 0
+            push.0
+            push.0
+            mem_store.3
+        else
+            # Continue looping
+            push.1
+        end
+    end
+
+    # Loop over the `operand_stack` pushing values 1-by-1 into memory starting at mem[5]
+    push.1
+    while.true
+        # Offset by 5 considering that we have 5 pre-set variables in `memory`
+        # and that memory is linear meaning that array starts at mem[5]  
+        push.5
+
+        # Load `counter` counter and add to 5 enabling incremental insertion
+        mem_load.3
+        add
+
+        # store element at that mem[5 + g]
+        mem_store
+
+        # increment `counter` by 1 and overwrite `memory`
+        mem_load.3
+        add.1
+        mem_store.3
+
+        # Load `counter` counter and `length` array length;
+        # check if `counter` == `length` signifying that all elements
+        # have been placed in `memory`
+        mem_load.3
+        mem_load.4
+        eq
+        if.true
+            # Stop looping and reset `counter` to 0
+            push.0
+            push.0
+            mem_store.3
+        else
+            # Continue looping
+            push.1
+        end
+    end
+
+    # Prepare the `operand_stack` for sort loop
+    push.1
+end
+
+# swapped() -> void
+#
+# Sets the `swapped` boolean variable to 1 - true
+proc.swapped  
+    push.1
+    mem_store.0
+end
+
+# notSwapped() -> void
+#
+# Sets the `swapped` boolean variable to 0 - false
+#
+proc.notSwapped
+    push.0
+    mem_store.0
+end
+
+# incrementCounters() -> void
+#
+# Increments the `i` and `j` counter variables by 1
+proc.incrementCounters
+    # load `i` counter, increment it by 1 and store it in mem[1]
+    mem_load.1
+    add.1
+    mem_store.1
+
+    # load `j` counter, increment it by 1 and store it in mem[2]
+    mem_load.2
+    add.1
+    mem_store.2
+end
+
+# decrementCounters() -> void
+#
+# Decrements the `i` and `j` counter variables by 1
+proc.decrementCounters
+    # load `i` counter, decrement it by 1 and store it in mem[1]
+    mem_load.1
+    sub.1
+    mem_store.1
+
+    # load `j` counter, decrement by 1 and store it in mem[2]
+    mem_load.2
+    sub.1
+    mem_store.2
+end
+
+# resetCounters() -> void
+#
+# Resets the `i` and `j` counter variables to their initial state if required conditions are met
+proc.resetCounters
+    # It is needed to reset the counters if `i` and `j` 
+    # are pointing the end of the array. Resetting the counters
+    # enables us to start over from the initial mem[i], mem[j]
+
+    # Load `j` counter and `length` array length
+    mem_load.2
+    mem_load.4
+
+    # Offset by 5 considering that we have 5 pre-set variables in `memory`
+    # and that memory is linear meaning that array starts at mem[5] 
+    add.5
+
+    # Check if they are equal
+    eq
+    if.true
+        # Reset `i`, `j` counters and `swapped` boolean to their initial values
+        push.6
+        mem_store.2
+        push.5
+        mem_store.1
+        exec.notSwapped
+    end
+end
+
+# loadValues() -> void
+#
+# Loads counters `i` and `j` and loads [a,b,...] `operand_stack` elements from mem[i], mem[j]
+proc.loadValues
+    # load `j` counter
+    mem_load.2
+
+    # load value `b` at index mem[j]
+    mem_load
+
+    # load `i` counter
+    mem_load.1
+
+    # load value `a` at index mem[i]
+    mem_load
+end
+
+# storeValues() -> void
+#
+# Loads counters `i` and `j` and stores [a,b,...] `operand_stack` elements in mem[i], mem[j]
+proc.storeValues
+    # load `i` counter
+    mem_load.1
+
+    # store value `a` at index mem[i]
+    mem_store
+
+    # load `j` counter
+    mem_load.2
+
+    # store value `b` at index mem[j]
+    mem_store
+end
+
+# sort() -> void
+#
+# Loads values [a,b,...] from `memory` into the `operand_stack` before sorting them
+proc.sort
+    # Load values `a` and `b` into the `operand_stack`
+    exec.loadValues
+
+    # Duplicate and compare them
+    dup.1
+    dup.1
+    lt
+
+    # If a > b then swap and store else store values as is
+    if.true
+        swap
+        exec.swapped
+        exec.storeValues
+    else
+        drop drop
+    end
+
+    # Increment counters to point to the next two elements of the array
+    exec.incrementCounters
+end
+
+# sorted() -> bool
+#
+# Checks if the array has been sorted
+proc.sorted
+    # Array is sorted if counters `i` and `j` are at end of array && `swapped` == 0
+    # We don't need to load both `i` and `j`, using only `j` is sufficient
+    # Load `j` counter and `length` array length
+    mem_load.2
+    mem_load.4
+
+    # Offset by 5 considering that we have 5 pre-set variables in `memory`
+    # and that memory is linear meaning that array starts at mem[5]
+    add.5
+
+    # Check if they are equal; signifying end of array
+    eq
+
+    # Load `swapped` boolean
+    mem_load.0
+    not
+
+    # Check if both requirements are true
+    and
+    if.true
+        push.0
+    else
+        push.1
+    end
+end
+
+
+# printResult() -> void
+#
+# Adds the array elements to the `operand_stack` before program completion and output
+proc.printResult
+    push.1
+    while.true
+        # Load the `i` counter; at this moment will be equal to `length`
+        mem_load.1
+
+        # Load from `memory` to `operand_stack` element at location mem[i]
+        mem_load
+
+        # Load `counter` counter and increment by 1; signifying that 1 element
+        # has been added to the `operand_stack` from `memory`
+        mem_load.3
+        add.1
+        mem_store.3
+
+        # Decrement counters - going through `memory` in reverse order
+        exec.decrementCounters
+
+        # Load `length` and `counter`
+        mem_load.4
+        mem_load.3
+
+        # Check if `counter` == `length` meaning that we have added all elements to the `operand_stack`
+        eq
+
+        # Exits the loop
+        if.true
+            push.0
+        else
+            push.1
+        end
+    end
+end
+
+begin
+    # Initialise the VM
+    exec.initialise
+    
+    # Loop over the array and sort repeatedly
+    while.true
+        # If looping has been done over the whole array reset counters to start over from the beginning
+        exec.resetCounters
+
+        # Sort elements two-by-two repeatedly
+        exec.sort
+
+        # Check if the array is sorted if so then stop looping
+        exec.sorted
+    end
+
+    # Add array to operand_stack for output - printing result
+    exec.printResult
+end
