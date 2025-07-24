@@ -1,0 +1,157 @@
+#! Quicksort (not randomized)
+#!
+#! Input stack:  [ n ]
+#! Input advice: [ element_1, element_2, ..., element_n ]
+#!
+#! Output stack: The elements in descending order
+#! Memory at end: The first n memory addresses contains the advice elements in ascending order.
+
+proc.load_array_from_advice
+  # [ array_length ]
+  push.0                           # Initialize counter
+  # [ counter = 0, array_length ]
+  dup.1 dup.1 gt                   # Loop condition
+  while.true
+    adv_push.1 dup.1 mem_store     # Move array element to memory
+    add.1                          # Update counter
+    dup.1 dup.1 gt                 # Loop condition
+  end
+  drop                             # Remove counter
+  # [ array_length ]
+end
+
+proc.load_array_from_mem
+  # Input:   [ array_length, ... ]
+  # Output:  [ mem.array_length, mem.{array_length-2}, ..., mem.1, mem.0, ... ]
+  push.0
+  dup.1 dup.1 gt
+  while.true
+    dup mem_load
+    movdn.2 add.1
+    dup.1 dup.1 gt
+  end
+  drop drop
+end
+
+proc.mem_swap
+  # Input:   [ index_0, index_1, ...]
+  # Output:  [ ... ]
+  # Effect:  Swaps mem.index_0 with mem.index_1
+  dup.1 mem_load
+  # [ mem.index_1, index_0, index_1, ...]
+  dup.1 mem_load
+  # [ mem.index_0, mem.index_1, index_0, index_1, ...]
+  swap.2 mem_store
+  # [ mem.index_0, index_1, ...]
+  swap mem_store
+end
+
+
+proc.sort_top_partition
+  # Input:         [ number_of_partitions, high_index, low_index, ...]
+  # Input memory:  Unsorted data in mem.low_index->mem.high_index
+  # Returns:       [ number_of_partitions+n-1, high_index_1, low_index_1, high_index_2, low_index_2, etc., ... ]
+  #                  if sorting created n new partitions with bounds [ low_index_i ; high_index_i ].
+  #                  n may be 0.
+  #                  low_index and high_index are consumed.
+  #                  low_index <= low_index_i <= high_index_i <= low_index_{i+1} <= high_index for all i in 1<=i<=n
+  # Output memory: Unsorted data in mem.low_index_i->mem.high_index_i for all i in 1<=i<=n
+  #                For all partitions i and j in 1<=i<=n, 1<=j<=n,
+  #                   if low_index_i < low_index_j, then
+  #                      all elements in partition mem.low_index_i->mem.high_index_i are lower than
+  #                      all elements in partition mem.low_index_j->mem.high_index_j.                       
+
+  sub.1                                           # Consume current partition. Decrement partition count.
+  swap.2                                          # Move number of partitions out of the way
+  # [ low_index, high_index, number_of_partitions - 1, ...]
+
+  dup.1 dup.1 lte
+
+  if.true                                         # high_index <= low_index. No or single element. No sorting needed
+    drop drop                                     # Remove partition
+    # [number_of_partitions - 1, ...]
+  else
+    dup.1                                         # Initialize high counter
+    dup.1                                         # Initialize pivot index = low index
+    dup add.1                                     # Initialize current = pivot index + 1
+    # [ current = pivot_index + 1, pivot_index, high_counter, low_index, high_index, number_of_partitions-1, ...]
+
+    push.1                                        # loop condition: current <= high_counter. Known to be true initially
+    while.true
+      dup.1 mem_load                              # Load pivot
+      dup.1 mem_load                              # Load current element
+
+      gt
+      if.true                                     # if current element < pivot
+        dup.1 dup.1 exec.mem_swap                 # swap pivot and current
+        swap add.2                                # increment pivot index, increment current
+      else                                        # if current element >= pivot
+        dup.2 dup.1 exec.mem_swap                 # swap current and high_counter element
+        movup.2 sub.1 movdn.2                     # decrement high counter
+      end
+
+      dup.2 dup.1 gte                             # loop condition: current <= high counter
+    end
+    # Invariants:
+    # - pivot_index = high_counter = current - 1
+    # Partitions created in memory: [ [ low_index, ..., pivot_index - 1] , pivot_index , [ current, ..., high_index ] ]
+    # [ current, pivot_index, high_counter, low_index, high_index, number_of_partitions-1, ...]
+
+    dup.4 dup.1 gt                                # high_index > pivot_index: High partition exists
+    if.true
+      swap.5                                      # Move lower bound of high partition to correct position
+                                                  # Upper bound of high partition is already in correct position
+      add.1                                       # Increment number of partitions
+      # [ number_of_partitions, pivot_index, high_counter, low_index, high_index, current, ...]
+    else                                          # High partition does not exists
+      drop movup.3 drop                           # Drop bounds on high partition
+      movup.3                                     # Move number of partitions to top of stack
+      # [ number_of_partitions-1, pivot_index, high_counter, low_index, ...]
+    end
+
+    dup.3 dup.2 lt                                # low_index < pivot_index: Low partition exists
+    if.true
+      add.1                                       # Increment number of partitions
+      swap sub.1 movdn.2 swap                     # Move pivot_index-1 to high bound of low partition
+      # [ high_counter, number_of_partitions (+1 if low partition exists), pivot_index - 1, low_index, ...]
+    else                                          # No low partition. Remove low partition markers
+      swap.3                                      # Move number of partitions to correct position
+      drop drop                                   # Drop bounds on low partition
+      # [ high_counter, number_of_partitions-1, ...]
+    end
+
+    drop                                          # high_counter no longer needed
+  end
+end
+
+proc.quicksort
+  # Input:         [ array_length, start_index, ... ]
+  # Input memory:  Unsorted data in mem.start_index->mem.{start_index+array_length-1}
+  # Returns:       [ ... ]
+  # Output memory: Sorted data in mem.start_index->mem.{start_index+array_length-1}
+  # 
+
+  # Verify parameters
+  u32assert.1                                      # start_index must be a legal address
+  dup.1 dup.1 add sub.1 u32assert.1 drop           # start_index+array_length-1 must be a legal address
+  dup neq.0 assert                                 # array_length must be greater than 0  
+
+  # Main algorithm
+  dup.1 add sub.1                                  # Initialize partition bound [ start_index+array_length-1, start_index]
+  push.1                                           # Initialize number of partitions to process
+  # [ number_of_partitions = 1, upper_bound = array_length - 1, lower_bound = start_index ]
+  dup neq.0                                        # Verify that there are partitions to process
+  while.true
+     exec.sort_top_partition                       # Process topmost partition
+    dup neq.0                                      # Verify that there are partitions left to process
+  end
+  drop                                             # Drop 0 number of partitions
+end
+
+begin
+  dup
+  exec.load_array_from_advice
+  push.0 swap                                      # first address is 0. Length of array is n.
+  exec.quicksort
+  exec.load_array_from_mem
+end
