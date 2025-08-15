@@ -183,6 +183,7 @@ impl InputFile {
 pub struct Inputs {
     pub stack_inputs: StackInputs,
     pub advice_provider: MemAdviceProvider,
+    #[allow(dead_code)]
     pub stack_outputs: StackOutputs,
 }
 

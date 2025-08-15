@@ -1,0 +1,129 @@
+name: Test Miden Examples
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    # Run daily at 2 AM UTC to catch upstream dependency changes
+    - cron: '0 2 * * *'
+
+jobs:
+  test-examples:
+    name: Test Examples
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        components: rustfmt, clippy
+        
+    - name: Cache Rust dependencies
+      uses: swatinem/rust-cache@v2
+      with:
+        workspaces: './benchmarking-cli'
+        
+    - name: Build testing CLI
+      working-directory: ./benchmarking-cli
+      run: cargo build --release
+      
+    - name: Validate examples directory structure
+      working-directory: ./benchmarking-cli
+      run: |
+        cargo run --release -- validate --ci
+        
+    - name: Test all examples
+      working-directory: ./benchmarking-cli
+      run: |
+        cargo run --release -- test-all --continue-on-error --ci
+      
+    - name: Test individual examples with verbose output
+      working-directory: ./benchmarking-cli
+      run: |
+        # Test a few key examples with verbose output for debugging
+        cargo run --release -- test --example fibonacci --verbose
+        cargo run --release -- test --example comparison --verbose
+        
+    - name: Run clippy
+      working-directory: ./benchmarking-cli
+      run: cargo clippy -- -D warnings
+      
+    - name: Format check
+      working-directory: ./benchmarking-cli
+      run: cargo fmt --all -- --check
+
+  test-upstream-compatibility:
+    name: Test with Upstream Dependencies
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+      
+    - name: Cache Rust dependencies
+      uses: swatinem/rust-cache@v2
+      with:
+        workspaces: './benchmarking-cli'
+        
+    - name: Test with latest miden-vm main
+      working-directory: ./benchmarking-cli
+      run: |
+        # Update to latest versions of miden-vm crates
+        cargo update --package miden-assembly
+        cargo update --package miden-processor
+        cargo update --package miden-stdlib
+        cargo update --package miden-vm
+        
+        # Build and test with latest versions
+        cargo build --release
+        cargo run --release -- test-all --continue-on-error --ci
+        
+    - name: Report upstream compatibility
+      if: always()
+      run: |
+        echo "## Upstream Compatibility Test" >> $GITHUB_STEP_SUMMARY
+        echo "- Tested with latest miden-vm main branch" >> $GITHUB_STEP_SUMMARY
+
+  benchmark-examples:
+    name: Benchmark Examples
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+      
+    - name: Cache Rust dependencies
+      uses: swatinem/rust-cache@v2
+      with:
+        workspaces: './benchmarking-cli'
+        
+    - name: Build benchmarking CLI
+      working-directory: ./benchmarking-cli
+      run: cargo build --release
+      
+    - name: Run benchmarks for key examples
+      working-directory: ./benchmarking-cli
+      run: |
+        echo "Running benchmarks for key examples..."
+        cargo run --release -- benchmark fibonacci --security high --output 1 > benchmark_results.txt 2>&1
+        cargo run --release -- benchmark comparison --security high --output 1 >> benchmark_results.txt 2>&1
+        cargo run --release -- benchmark collatz --security high --output 1 >> benchmark_results.txt 2>&1
+        
+    - name: Upload benchmark results
+      uses: actions/upload-artifact@v3
+      with:
+        name: benchmark-results
+        path: ./benchmarking-cli/benchmark_results.txt

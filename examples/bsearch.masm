@@ -35,7 +35,7 @@ proc.binary_search
         # => [start, end, val, ...]
 
         # calculate middle address (if array has odd size, an integer floor will be taken)
-        dup.1 dup.1 u32wrapping_sub u32checked_div.2 dup.1 u32wrapping_add
+        dup.1 dup.1 u32wrapping_sub u32div.2 dup.1 u32wrapping_add
         # => [middle, start, end, val, ...], middle = start + (end - start) / 2
 
         # read middle element from the memory

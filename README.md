@@ -36,11 +36,29 @@ There are several examples in our repo and we hope we get more in the future. Th
 
 ---
 
-## Running the playground locally
+## Testing Examples
 
-You can also run the playground locally on your machine.
+### Quick Setup
+```bash
+./setup-testing.sh
+```
 
-### Starting site
+### Test Commands
+```bash
+# Test all examples
+cd benchmarking-cli && cargo run -- test-all
+
+# Test specific example
+cd benchmarking-cli && cargo run -- test --example fibonacci
+
+# Validate directory structure
+cd benchmarking-cli && cargo run -- validate
+
+# Benchmark example
+cd benchmarking-cli && cargo run -- benchmark --example fibonacci
+```
+
+### Running the playground locally
 
 If you want to run it locally, then make sure you have the [wasm-pack](https://rustwasm.github.io/wasm-pack/installer/) installed.
 
