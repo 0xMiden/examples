@@ -2,7 +2,7 @@ mod utils_input;
 mod utils_program;
 use clap::{Parser, Subcommand};
 use miden_air::ExecutionOptions;
-use miden_vm::{DefaultHost, MemAdviceProvider, ProvingOptions};
+use miden_vm::{DefaultHost, ProvingOptions};
 use std::fs;
 use std::path::PathBuf;
 use std::process::exit;
@@ -199,16 +199,19 @@ fn benchmark_example(
 
     let program_to_run = program.program.clone().unwrap();
 
-    let host = DefaultHost::new(MemAdviceProvider::from(inputs.advice_provider.clone()));
+    let _host = DefaultHost::default();
 
-    let execution_options = ExecutionOptions::new(None, 64).map_err(|err| format!("{err}"))?;
+    let execution_options = ExecutionOptions::new(None, 64, false, false).map_err(|err| format!("{err}"))?;
 
     // Execution time
     let now = Instant::now();
+    let advice_inputs = inputs.advice_inputs.clone();
+    let mut host = DefaultHost::default();
     let trace = miden_vm::execute(
         &program_to_run,
         inputs.stack_inputs.clone(),
-        host,
+        advice_inputs,
+        &mut host,
         execution_options,
     )
     .map_err(|err| format!("Failed to generate execution trace = {:?}", err))
@@ -223,13 +226,16 @@ fn benchmark_example(
         ProvingOptions::with_96_bit_security(false)
     };
 
-    let host = DefaultHost::new(MemAdviceProvider::from(inputs.advice_provider));
+    let advice_inputs_proof = inputs.advice_inputs.clone();
+    let _host = DefaultHost::default();
 
     let now = Instant::now();
+    let mut host_for_prove = DefaultHost::default();
     let (output_result, proof) = miden_vm::prove(
         &program.program.unwrap(),
         inputs.stack_inputs.clone(),
-        host,
+        advice_inputs_proof,
+        &mut host_for_prove,
         proof_options,
     )
     .expect("Proving failed");
@@ -313,14 +319,17 @@ fn test_example(
         .deserialize_inputs(&input_string)
         .map_err(|e| format!("Failed to deserialize inputs: {}", e))?;
 
-    let host = DefaultHost::new(MemAdviceProvider::from(inputs.advice_provider.clone()));
-    let execution_options = ExecutionOptions::new(None, 64)
+    let advice_inputs_test = inputs.advice_inputs.clone();
+    let _host = DefaultHost::default();
+    let execution_options = ExecutionOptions::new(None, 64, false, false)
         .map_err(|e| format!("Failed to create execution options: {}", e))?;
 
+    let mut host_for_test = DefaultHost::default();
     let trace = miden_vm::execute(
         &program.program.clone().unwrap(),
         inputs.stack_inputs.clone(),
-        host,
+        advice_inputs_test,
+        &mut host_for_test,
         execution_options,
     )
     .map_err(|e| format!("Execution failed: {}", e))?;

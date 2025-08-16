@@ -18,7 +18,7 @@ proc.binary_search
     # => [start, end, val, ...]
 
     # check if `start < end`
-    dup dup.2 u32checked_lt
+    dup dup.2 u32lt
     # => [start < end, start, end, val, ...]
 
     if.true
@@ -61,7 +61,7 @@ proc.binary_search
 
             # value wasn't found on this step, so we decide, where to go next
             # is middle value less than `val`?
-            dup.4 u32checked_lt
+            dup.4 u32lt
             # => [memory[middle] < val, middle, start, end, val, ...]
 
             if.true

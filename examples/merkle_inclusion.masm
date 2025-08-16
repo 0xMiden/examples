@@ -12,4 +12,10 @@ begin
         add.1 swap.5 add.1
         # => [i+1, 0, 0, 0, d, i+1, R ...]
     end
+    
+    # Clean up stack to stay within 16 element limit
+    # Drop excess elements, keeping only the final result
+    swapw dropw
+    swapw dropw
+    swapw dropw
 end
