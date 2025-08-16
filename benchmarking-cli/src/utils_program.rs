@@ -20,14 +20,15 @@ impl MidenProgram {
 
     pub fn compile_program(&mut self) -> Result<(), String> {
         self.assembler = Assembler::default()
-            .with_static_library(&StdLibrary::default())
-                .map_err(|err| err.to_string())?
+            .with_static_library(StdLibrary::default())
+            .map_err(|err| err.to_string())?
             .with_debug_mode(false);
 
         self.program = Some(
-            self.assembler.clone()
+            self.assembler
+                .clone()
                 .assemble_program(&self.masm_code)
-                .map_err(|err| format!("Failed to compile program - {}", err.to_string()))?,
+                .map_err(|err| format!("Failed to compile program - {err}"))?,
         );
 
         self.program_info = Some(ProgramInfo::new(

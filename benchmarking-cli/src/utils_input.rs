@@ -98,8 +98,7 @@ impl InputFile {
     /// Parse advice stack data from the input file.
     fn parse_advice_stack(&self) -> Result<Vec<u64>, String> {
         self.advice_stack
-            .as_ref()
-            .map(Vec::as_slice)
+            .as_deref()
             .unwrap_or(&[])
             .iter()
             .map(|v| {
@@ -126,7 +125,7 @@ impl InputFile {
 
                 // convert bytes to Word (4 Felt elements)
                 let word: Word = Word::try_from(key_bytes)
-                .map_err(|e| format!("failed to convert bytes to word - {e}"))?;
+                    .map_err(|e| format!("failed to convert bytes to word - {e}"))?;
 
                 // convert values to Felt
                 let values = v
@@ -163,8 +162,8 @@ impl InputFile {
                 MerkleData::SparseMerkleTree(data) => {
                     let entries = parse_sparse_merkle_tree(data)?;
                     // TODO: Support variable depth
-                    let smt: SimpleSmt<{ SMT_MAX_DEPTH }> =
-                        SimpleSmt::with_leaves(entries).map_err(|e| {
+                    let smt: SimpleSmt<{ SMT_MAX_DEPTH }> = SimpleSmt::with_leaves(entries)
+                        .map_err(|e| {
                             format!("failed to add sparse merkle tree to merkle store - {e}")
                         })?;
                     merkle_store.extend(smt.inner_nodes());

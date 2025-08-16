@@ -14,7 +14,6 @@ use std::time::Instant;
     version,
     about = "A comprehensive CLI for Miden examples (benchmarking and testing)"
 )]
-
 struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -176,24 +175,24 @@ fn benchmark_example(
     output: usize,
 ) -> Result<(), Box<dyn std::error::Error>> {
     println!("============================================================");
-    println!("Benchmarking Miden example: {}", example_name);
+    println!("Benchmarking Miden example: {example_name}");
     println!("============================================================");
 
     // let's read the program
-    let program_string = fs::read_to_string(format!("../examples/{}.masm", example_name))?;
+    let program_string = fs::read_to_string(format!("../examples/{example_name}.masm"))?;
 
-    let input_string = fs::read_to_string(format!("../examples/{}.inputs", example_name))?;
+    let input_string = fs::read_to_string(format!("../examples/{example_name}.inputs"))?;
     let mut inputs = utils_input::Inputs::new();
     inputs
         .deserialize_inputs(input_string.as_str())
-        .map_err(|err| format!("Failed to deserialize inputs - {:?}", err))?;
+        .map_err(|err| format!("Failed to deserialize inputs - {err:?}"))?;
 
     // Compilation time
     let now = Instant::now();
     let mut program = utils_program::MidenProgram::new(program_string.as_str());
     program
         .compile_program()
-        .map_err(|err| format!("Failed to compile program - {:?}", err))?;
+        .map_err(|err| format!("Failed to compile program - {err:?}"))?;
 
     println! {"Compilation Time (cold): {} ms", now.elapsed().as_millis()}
 
@@ -201,7 +200,8 @@ fn benchmark_example(
 
     let _host = DefaultHost::default();
 
-    let execution_options = ExecutionOptions::new(None, 64, false, false).map_err(|err| format!("{err}"))?;
+    let execution_options =
+        ExecutionOptions::new(None, 64, false, false).map_err(|err| format!("{err}"))?;
 
     // Execution time
     let now = Instant::now();
@@ -214,7 +214,7 @@ fn benchmark_example(
         &mut host,
         execution_options,
     )
-    .map_err(|err| format!("Failed to generate execution trace = {:?}", err))
+    .map_err(|err| format!("Failed to generate execution trace = {err:?}"))
     .unwrap();
 
     println! {"Execution Time: {} steps in {} ms", trace.get_trace_len(), now.elapsed().as_millis()}
@@ -252,7 +252,7 @@ fn benchmark_example(
         output_result.clone(),
         proof,
     )
-    .map_err(|err| format!("Program failed verification! - {}", err))?;
+    .map_err(|err| format!("Program failed verification! - {err}"))?;
 
     println! {"Verification Time: {} ms", now.elapsed().as_millis()}
 
@@ -268,24 +268,24 @@ fn test_example(
     ci: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
     if !ci {
-        println!("Testing example: {}", example_name);
+        println!("Testing example: {example_name}");
     }
 
     // Check if .masm file exists
-    let masm_path = PathBuf::from(format!("../examples/{}.masm", example_name));
+    let masm_path = PathBuf::from(format!("../examples/{example_name}.masm"));
     if !masm_path.exists() {
         return Err(format!("Example file not found: {}", masm_path.display()).into());
     }
 
     // Check if .inputs file exists
-    let inputs_path = PathBuf::from(format!("../examples/{}.inputs", example_name));
+    let inputs_path = PathBuf::from(format!("../examples/{example_name}.inputs"));
     if !inputs_path.exists() {
         return Err(format!("Inputs file not found: {}", inputs_path.display()).into());
     }
 
     // Read and validate .masm file
     let program_string =
-        fs::read_to_string(&masm_path).map_err(|e| format!("Failed to read .masm file: {}", e))?;
+        fs::read_to_string(&masm_path).map_err(|e| format!("Failed to read .masm file: {e}"))?;
 
     if verbose {
         println!("  OK .masm file read successfully");
@@ -293,11 +293,11 @@ fn test_example(
 
     // Read and validate .inputs file
     let input_string = fs::read_to_string(&inputs_path)
-        .map_err(|e| format!("Failed to read .inputs file: {}", e))?;
+        .map_err(|e| format!("Failed to read .inputs file: {e}"))?;
 
     // Validate JSON syntax
     let _: serde_json::Value = serde_json::from_str(&input_string)
-        .map_err(|e| format!("Invalid JSON in .inputs file: {}", e))?;
+        .map_err(|e| format!("Invalid JSON in .inputs file: {e}"))?;
 
     if verbose {
         println!("  OK .inputs file is valid JSON");
@@ -307,7 +307,7 @@ fn test_example(
     let mut program = utils_program::MidenProgram::new(&program_string);
     program
         .compile_program()
-        .map_err(|e| format!("Compilation failed: {}", e))?;
+        .map_err(|e| format!("Compilation failed: {e}"))?;
 
     if verbose || !ci {
         println!("  OK Compilation successful");
@@ -317,12 +317,12 @@ fn test_example(
     let mut inputs = utils_input::Inputs::new();
     inputs
         .deserialize_inputs(&input_string)
-        .map_err(|e| format!("Failed to deserialize inputs: {}", e))?;
+        .map_err(|e| format!("Failed to deserialize inputs: {e}"))?;
 
     let advice_inputs_test = inputs.advice_inputs.clone();
     let _host = DefaultHost::default();
     let execution_options = ExecutionOptions::new(None, 64, false, false)
-        .map_err(|e| format!("Failed to create execution options: {}", e))?;
+        .map_err(|e| format!("Failed to create execution options: {e}"))?;
 
     let mut host_for_test = DefaultHost::default();
     let trace = miden_vm::execute(
@@ -332,7 +332,7 @@ fn test_example(
         &mut host_for_test,
         execution_options,
     )
-    .map_err(|e| format!("Execution failed: {}", e))?;
+    .map_err(|e| format!("Execution failed: {e}"))?;
 
     if verbose {
         println!(
@@ -342,7 +342,7 @@ fn test_example(
     }
 
     if !ci {
-        println!("  OK Example '{}' passed all tests", example_name);
+        println!("  OK Example '{example_name}' passed all tests");
     }
 
     Ok(())
@@ -377,14 +377,14 @@ fn test_all_examples(
                 Ok(_) => {
                     passed_count += 1;
                     if verbose && !ci {
-                        println!("PASS {}", example_name);
+                        println!("PASS {example_name}");
                     }
                 }
                 Err(e) => {
                     let error_msg = e.to_string();
                     failed_examples.push((example_name.to_string(), error_msg.clone()));
                     if !ci {
-                        println!("FAIL {}: {}", example_name, error_msg);
+                        println!("FAIL {example_name}: {error_msg}");
                     }
                     if !continue_on_error {
                         break;
@@ -396,14 +396,14 @@ fn test_all_examples(
 
     if !ci {
         println!("\nTest Summary:");
-        println!("  Total examples: {}", total_count);
-        println!("  Passed: {}", passed_count);
+        println!("  Total examples: {total_count}");
+        println!("  Passed: {passed_count}");
         println!("  Failed: {}", failed_examples.len());
 
         if !failed_examples.is_empty() {
             println!("\nFailed examples:");
             for (name, error) in &failed_examples {
-                println!("  - {}: {}", name, error);
+                println!("  - {name}: {error}");
             }
         }
     }
@@ -439,16 +439,16 @@ fn validate_examples_directory(_verbose: bool, ci: bool) -> Result<(), Box<dyn s
             // Check for corresponding .inputs file
             let inputs_path = path.with_extension("inputs");
             if !inputs_path.exists() {
-                validation_errors.push(format!("Missing .inputs file for {}", example_name));
+                validation_errors.push(format!("Missing .inputs file for {example_name}"));
             }
 
             // Validate .masm file content
             if let Ok(content) = fs::read_to_string(&path) {
                 if content.trim().is_empty() {
-                    validation_errors.push(format!("Empty .masm file: {}", example_name));
+                    validation_errors.push(format!("Empty .masm file: {example_name}"));
                 }
             } else {
-                validation_errors.push(format!("Cannot read .masm file: {}", example_name));
+                validation_errors.push(format!("Cannot read .masm file: {example_name}"));
             }
 
             // Validate .inputs file JSON if it exists
@@ -456,10 +456,10 @@ fn validate_examples_directory(_verbose: bool, ci: bool) -> Result<(), Box<dyn s
                 if let Ok(content) = fs::read_to_string(&inputs_path) {
                     if serde_json::from_str::<serde_json::Value>(&content).is_err() {
                         validation_errors
-                            .push(format!("Invalid JSON in .inputs file: {}", example_name));
+                            .push(format!("Invalid JSON in .inputs file: {example_name}"));
                     }
                 } else {
-                    validation_errors.push(format!("Cannot read .inputs file: {}", example_name));
+                    validation_errors.push(format!("Cannot read .inputs file: {example_name}"));
                 }
             }
         }
@@ -468,7 +468,7 @@ fn validate_examples_directory(_verbose: bool, ci: bool) -> Result<(), Box<dyn s
     if !validation_errors.is_empty() {
         for error in &validation_errors {
             if !ci {
-                println!("ERROR {}", error);
+                println!("ERROR {error}");
             }
         }
         Err(format!(
