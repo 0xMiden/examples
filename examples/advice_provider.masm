@@ -74,5 +74,5 @@ begin
     push.0.0.0.1 adv.push_mapval padw adv_loadw
 
     # Clean up stack to stay within 16 element limit
-    drop drop drop drop drop drop drop drop
+    dropw dropw
 end
