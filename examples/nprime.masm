@@ -175,4 +175,31 @@ begin
     # drop the counters
     drop
     drop
+
+    # Clean up stack to stay within 16 element limit
+    # Keep only the top 16 primes (as expected according to the example)
+    swapw dropw
+    swapw dropw
+    swapw dropw
+    swapw dropw
+    swapw dropw
+    swapw dropw
+    swapw dropw
+    swapw dropw
+    swapw dropw
+    swapw dropw
+    swapw dropw
+    swapw dropw
+    swapw dropw
+    swapw dropw
+    swapw dropw
+    swapw dropw
+    swapw dropw
+    swapw dropw
+    swapw dropw
+    swapw dropw
+    swapw dropw
+    swapw dropw
+    swapw dropw
+    swapw dropw
 end

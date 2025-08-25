@@ -6,8 +6,8 @@ edition = "2021"
 [dependencies]
 clap = { version = "4.0.0", features = ["derive"] }
 hex = { version = "0.4.0", default-features = false }
-miden-air = { version = "0.7.0", package = "miden-air", default-features = false }
-miden-stdlib = { version = "0.6.0", package = "miden-stdlib", default-features = false }
-miden_vm = { version = "0.7.0", package = "miden-vm", features = ["concurrent"]}
+miden-air = { version = "0.17", package = "miden-air", default-features = false }
+miden-stdlib = { version = "0.17", package = "miden-stdlib", default-features = false }
+miden_vm = { version = "0.17", package = "miden-vm", features = ["concurrent"]}
 serde = { version = "1", features = ["derive"] } # You only need this if you want app persistence
 serde_json = "1.0.48"

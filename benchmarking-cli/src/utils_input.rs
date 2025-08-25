@@ -1,9 +1,11 @@
 use miden_vm::{
     crypto::{MerkleStore, MerkleTree, SimpleSmt},
     math::Felt,
-    utils::collections::BTreeMap,
-    AdviceInputs, MemAdviceProvider, StackInputs, StackOutputs, Word,
+    AdviceInputs, AdviceProvider, StackInputs, StackOutputs, Word,
 };
+use std::collections::BTreeMap;
+
+const SMT_MAX_DEPTH: u8 = 64;
 
 /// The Outputs struct is used to serialize the output of the program.
 /// Via Rust WASM we cannot return arbitrary structs, so we need to serialize it to JSON.
@@ -59,8 +61,8 @@ pub struct InputFile {
 
 /// Helper methods to interact with the input file
 impl InputFile {
-    /// Parse advice provider data from the input file.
-    pub fn parse_advice_provider(&self) -> Result<MemAdviceProvider, String> {
+    /// Parse advice inputs data from the input file.
+    pub fn parse_advice_inputs(&self) -> Result<AdviceInputs, String> {
         let mut advice_inputs = AdviceInputs::default();
 
         let stack = self
@@ -84,14 +86,19 @@ impl InputFile {
             advice_inputs = advice_inputs.with_merkle_store(merkle_store);
         }
 
-        Ok(MemAdviceProvider::from(advice_inputs))
+        Ok(advice_inputs)
+    }
+
+    /// Parse advice provider data from the input file.
+    pub fn parse_advice_provider(&self) -> Result<AdviceProvider, String> {
+        let advice_inputs = self.parse_advice_inputs()?;
+        Ok(AdviceProvider::from(advice_inputs))
     }
 
     /// Parse advice stack data from the input file.
     fn parse_advice_stack(&self) -> Result<Vec<u64>, String> {
         self.advice_stack
-            .as_ref()
-            .map(Vec::as_slice)
+            .as_deref()
             .unwrap_or(&[])
             .iter()
             .map(|v| {
@@ -102,7 +109,7 @@ impl InputFile {
     }
 
     /// Parse advice map data from the input file.
-    fn parse_advice_map(&self) -> Result<Option<BTreeMap<[u8; 32], Vec<Felt>>>, String> {
+    fn parse_advice_map(&self) -> Result<Option<BTreeMap<Word, Vec<Felt>>>, String> {
         let advice_map = match &self.advice_map {
             Some(advice_map) => advice_map,
             None => return Ok(None),
@@ -112,9 +119,13 @@ impl InputFile {
             .iter()
             .map(|(k, v)| {
                 // decode hex key
-                let mut key = [0u8; 32];
-                hex::decode_to_slice(k, &mut key)
+                let mut key_bytes = [0u8; 32];
+                hex::decode_to_slice(k, &mut key_bytes)
                     .map_err(|e| format!("failed to decode advice map key `{k}` - {e}"))?;
+
+                // convert bytes to Word (4 Felt elements)
+                let word: Word = Word::try_from(key_bytes)
+                    .map_err(|e| format!("failed to convert bytes to word - {e}"))?;
 
                 // convert values to Felt
                 let values = v
@@ -125,9 +136,9 @@ impl InputFile {
                         })
                     })
                     .collect::<Result<Vec<_>, _>>()?;
-                Ok((key, values))
+                Ok((word, values))
             })
-            .collect::<Result<BTreeMap<[u8; 32], Vec<Felt>>, String>>()?;
+            .collect::<Result<BTreeMap<Word, Vec<Felt>>, String>>()?;
 
         Ok(Some(map))
     }
@@ -151,8 +162,8 @@ impl InputFile {
                 MerkleData::SparseMerkleTree(data) => {
                     let entries = parse_sparse_merkle_tree(data)?;
                     // TODO: Support variable depth
-                    let smt =
-                        SimpleSmt::with_leaves(SimpleSmt::MAX_DEPTH, entries).map_err(|e| {
+                    let smt: SimpleSmt<{ SMT_MAX_DEPTH }> = SimpleSmt::with_leaves(entries)
+                        .map_err(|e| {
                             format!("failed to add sparse merkle tree to merkle store - {e}")
                         })?;
                     merkle_store.extend(smt.inner_nodes());
@@ -175,14 +186,16 @@ impl InputFile {
             .map(|v| v.parse::<u64>().map_err(|e| e.to_string()))
             .collect::<Result<Vec<_>, _>>()?;
 
-        StackInputs::try_from_values(stack_inputs).map_err(|e| e.to_string())
+        StackInputs::try_from_ints(stack_inputs).map_err(|e| e.to_string())
     }
 }
 
 /// Miden Inputs plus Outputs that are used as inputs for the verifier.
 pub struct Inputs {
     pub stack_inputs: StackInputs,
-    pub advice_provider: MemAdviceProvider,
+    pub advice_inputs: AdviceInputs,
+    pub advice_provider: AdviceProvider,
+    #[allow(dead_code)]
     pub stack_outputs: StackOutputs,
 }
 
@@ -190,9 +203,10 @@ pub struct Inputs {
 impl Inputs {
     pub fn new() -> Self {
         Self {
-            stack_inputs: StackInputs::new(vec![]),
-            advice_provider: MemAdviceProvider::default(),
-            stack_outputs: StackOutputs::new(vec![], vec![]).unwrap(),
+            stack_inputs: StackInputs::new(vec![]).unwrap(),
+            advice_inputs: AdviceInputs::default(),
+            advice_provider: AdviceProvider::default(),
+            stack_outputs: StackOutputs::new(vec![]).unwrap(),
         }
     }
 
@@ -201,6 +215,7 @@ impl Inputs {
             let inputs_des: InputFile = serde_json::from_str(inputs).map_err(|e| e.to_string())?;
 
             self.stack_inputs = inputs_des.parse_stack_inputs().unwrap();
+            self.advice_inputs = inputs_des.parse_advice_inputs().unwrap();
             self.advice_provider = inputs_des.parse_advice_provider().unwrap();
         }
         Ok(())
