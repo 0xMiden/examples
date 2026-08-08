@@ -2,11 +2,11 @@
 
 Playground for example programs for the [Miden VM](https://github.com/0xMiden/miden-vm) in Miden assembly.
 
-[Use the playground!](https://0xmiden.github.io/examples/)
+[Use the playground!](https://playground.miden.xyz)
 
 The goal of this playground is for developers to see how easy it is to write and execute code in Miden assembly. The examples come from the community and the team. If you come up with an example of your own, we are happy to include it in the list below. You can simply open a PR with your example adding the `.masm` and `.inputs` files.
 
-Examples are written in Miden assembly, see [Miden assembly documentation](https://0xmiden.github.io/miden-docs/imported/miden-vm/src/user_docs/assembly/main.html). External inputs can be provided to the examples and the Miden VM in two ways as public inputs and via the advice provider, see [here](https://0xmiden.github.io/miden-docs/imported/miden-vm/src/intro/overview.html#inputs-and-outputs). Currently, in the playground you can use `operand_stack` as public input and the `advice_stack` as secret input.
+Examples are written in Miden assembly, see [Miden assembly documentation](https://docs.miden.xyz/reference/miden-vm/overview). External inputs can be provided to the examples and the Miden VM in two ways as public inputs and via the advice provider, see [here](https://docs.miden.xyz/reference/protocol/architecture). Currently, in the playground you can use `operand_stack` as public input and the `advice_stack` as secret input.
 
 In addition to running existing examples you can also write your own program and execute it. The examples can then serve as inspiration.
 
