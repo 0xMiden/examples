@@ -34,6 +34,8 @@ There are several examples in our repo and we hope we get more in the future. Th
 
 - **Game-of-Life**: Implementation of Conway's Game of Life. But we can prove it. The static example runs on a 4x4 cell universe and 1000 generations.
 
+- **Merkle Inclusion**: A program which verifies 1,000 Merkle inclusion paths in a Sparse Merkle Tree using `mtree_verify` in Miden assembly to confirm leaf membership against a root digest.
+
 ---
 
 ## Testing Examples
